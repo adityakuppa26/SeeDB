@@ -8,6 +8,7 @@ Created on Mon Apr 11 21:58:41 2022
 
 import psycopg2
 import pandas as pd
+import numpy as np
 
 # psql -h cs645db.cs.umass.edu -p 7645
                        
@@ -135,8 +136,30 @@ def sharing_optimization():
 kl_divergence([i[1] for i in sorted(workclass_reference_records)],[i[1] for i in sorted(workclass_actual_records)])
     
     
+def hoeffding_serfling_running_conf(phase, N_phases, delta):
+    
+    numerator = (1 - ((phase - 1)/N_phases))*(2*np.log(np.log(phase)) + np.log((np.pi*np.pi) / (3*delta)))
+    epsilon_m = np.sqrt(numerator / (2 * phase))
+    return epsilon_m
 
+def prune(kl_div_list, phase, N_phase, delta, k ):
+    kl_div_array = np.array(kl_div_list)
 
+    if phase == 1:
+        return []
+    else:
+        top_k_kl_divg = np.sort(kl_div_array)[::-1][:k]
+        CI = hoeffding_serfling_running_conf(phase, N_phase, delta)
+
+        min_lower_bound = top_k_kl_divg[k-1] - CI
+        prune_list = []
+        for i in range(len(kl_div_list)):
+            if kl_div_list[i]+CI < min_lower_bound:
+                prune_list.apped(i)
+
+    return prune_list
+
+    
 
 
 
