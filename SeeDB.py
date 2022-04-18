@@ -155,7 +155,7 @@ def prune(kl_div_list, phase, N_phase, delta, k ):
         prune_list = []
         for i in range(len(kl_div_list)):
             if kl_div_list[i]+CI < min_lower_bound:
-                prune_list.apped(i)
+                prune_list.append(i)
 
     return prune_list
 
