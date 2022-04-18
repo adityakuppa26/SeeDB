@@ -9,15 +9,25 @@ Created on Mon Apr 11 21:58:41 2022
 import psycopg2
 import pandas as pd
 import numpy as np
+import math
+import matplotlib.pyplot as plt
+from SeeDBUtils import SeeDB
+# import SeeDBUtils
+
+
+
 
 # psql -h cs645db.cs.umass.edu -p 7645
                        
 #You are connected to database "ksarode" as user "ksarode" on host "cs645db.cs.umass.edu" (address "128.119.243.149") at port "7645".
 #SSL connection (protocol: TLSv1.3, cipher: TLS_AES_256_GCM_SHA384, bits: 256, compression: off)
 
-# conn = psycopg2.connect(dbname="ksarode")
-conn = psycopg2.connect(dbname="ksarode", port="7645" , host="cs645db.cs.umass.edu")
-# conn = psycopg2.connect(user='ksarode', password='Kruti2306!',dbname="papers")
+# conn = psycopg2.connect(dbname="ksarode", port="7645" , host="cs645db.cs.umass.edu")
+conn = psycopg2.connect(
+    host="localhost",
+    database="postgres",
+    user="postgres",
+    password="Kruti2306!")
 #Creating a cursor object using the cursor() method
 cursor = conn.cursor()
 
@@ -29,137 +39,85 @@ data = cursor.fetchone()
 
 print(data)
 
-select_data_query = "select * from concensus"
+select_data_query = "select * from census"
 
 cursor.execute(select_data_query) 
 concensus_records = cursor.fetchall()
 
-print("Print each row and it's columns values")
-for row in concensus_records:
-        print(type(row))
-        print("Model = ", row[1])
-        print("Price  = ", row[2], "\n")
+
         
         
-raw_df=pd.DataFrame(concensus_records,columns =['age', 'workclass','fnlwgt','education','education_num','marital_status','occupation','relationship','race','sex','capital_gain','capital_loss','hours_per_week','native_country','salary_range'])
+# raw_df=pd.DataFrame(concensus_records,columns =['age', 'workclass','fnlwgt','education','education_num','marital_status','occupation','relationship','race','sex','capital_gain','capital_loss','hours_per_week','native_country','salary_range'])
 
-q="select * from concensus where marital_status like 'Married%'"
-cursor.execute(select_data_query) 
-qr_records = cursor.fetchall()
-qr_df=pd.DataFrame(qr_records,columns =['age', 'workclass','fnlwgt','education','education_num','marital_status','occupation','relationship','race','sex','capital_gain','capital_loss','hours_per_week','native_country','salary_range'])
+# q="select * from census where marital_status like 'Married%'"
+# cursor.execute(select_data_query) 
+# qr_df=pd.DataFrame(qr_records,columns =['age', 'workclass','fnlwgt','education','education_num','marital_status','occupation','relationship','race','sex','capital_gain','capital_loss','hours_per_week','native_country','salary_range'])
 
 
-q="select * from concensus where marital_status not like 'Married%'"
-cursor.execute(select_data_query) 
-qd_records = cursor.fetchall()
-qd_df=pd.DataFrame(qd_records,columns =['age', 'workclass','fnlwgt','education','education_num','marital_status','occupation','relationship','race','sex','capital_gain','capital_loss','hours_per_week','native_country','salary_range'])
+# q="select * from census where marital_status not like 'Married%'"
 
-# print("Print each row and it's columns values")
-# for row in qr_records[:5]:
-#         print("Workclass = ", row[1])
-#         print("fnlwgt  = ", row[2], "\n")
-        
-# col_min=raw_df["capital_loss"].min()
-# col_max=raw_df["capital_loss"].max()
-# normalization_query="select capital_loss, (capital_loss-{})/({}-{}) as normalized_capital_loss from concensus ".format(col_min,col_max,col_min)
-# print(normalization_query)
-# cursor.execute(normalization_query) 
-# q_records = cursor.fetchall()
+# cursor.execute(select_data_query) 
+# qd_records = cursor.fetchall()
+# qd_df=pd.DataFrame(qd_records,columns =['age', 'workclass','fnlwgt','education','education_num','marital_status','occupation','relationship','race','sex','capital_gain','capital_loss','hours_per_week','native_country','salary_range'])
 
-# print("Print each row and it's columns values")
-# for row in q_records[:5]:
-#         print("CaptalLoss = ", row[0])
-#         print("value  = ", row[1], "\n")
-        
-# raw_df["normalized_capital_loss"]=(raw_df["capital_loss"]-col_min)/(col_max-col_min)
-# raw_df.head()
-# raw_df['hours_per_week'].unique()
-# raw_df["normalized_hours_per_week"]=(raw_df["hours_per_week"]-raw_df["hours_per_week"].min())/(raw_df["hours_per_week"].max()-raw_df["hours_per_week"].min())
-# raw_df.head()
+#
 
-# qr_df["normalized_capital_loss"]=(raw_df["capital_loss"]-col_min)/(col_max-col_min)
-# qr_df['hours_per_week'].unique()
-# qr_df["normalized_hours_per_week"]=(raw_df["hours_per_week"]-raw_df["hours_per_week"].min())/(raw_df["hours_per_week"].max()-raw_df["hours_per_week"].min())
-
-# qd_df["normalized_capital_loss"]=(raw_df["capital_loss"]-col_min)/(col_max-col_min)
-# qd_df.head()
-# qd_df['hours_per_week'].unique()
-# qd_df["normalized_hours_per_week"]=(raw_df["hours_per_week"]-raw_df["hours_per_week"].min())/(raw_df["hours_per_week"].max()-raw_df["hours_per_week"].min())
-
-# q1_df=qr_df.groupby(['workclass'])['normalized_hours_per_week'].agg('sum')
-# q1_df.head()
-
-q="drop view reference_data;drop view actual_data;create view reference_data as select * from concensus where marital_status not like 'Married%';\
-    create view actual_data as select * from concensus where marital_status like 'Married%';"
+q="drop view reference_data cascade;drop view actual_data cascade;create view reference_data as select * from census where marital_status not like 'Married%';create view actual_data as select * from census where marital_status like 'Married%';"
     
 cursor.execute(q) 
 conn.commit()
-
-q="select workclass,sum(capital_loss) as capital_loss from reference_data group by workclass"
-cursor.execute(q) 
-workclass_reference_records = cursor.fetchall()
-for row in workclass_reference_records:
-        print("Model = ", row[0])
-        print("Price  = ", row[1], "\n")
-        
+      
 # cursor.execute("ROLLBACK")
 # conn.commit()
-q="select workclass,sum(capital_loss) as capital_loss from actual_data group by workclass"
-cursor.execute(q) 
-workclass_actual_records = cursor.fetchall()
-import math
-print([i[1] for i in workclass_actual_records])
 
-def normalize_data(data):
-    minn=min(data)
-    maxx=max(data)
-    return [round((i-minn)/(maxx-minn),3) for i in data]
+num_phases=3
+# print(len(concensus_records))
+records_per_phase=int(len(concensus_records)/num_phases)
+# print(concensus_records[-1][0])
+div=np.linspace(0, len(concensus_records)-1, num_phases+1,dtype=int)
+# print(div)
+ 
+see_db=SeeDB() 
+for i in range(0,1):#len(div)-1):
+    # print(div[i],div[i+1])
+    kl_divergence_dic=see_db.sharing_optimization_modified(cursor,div[i],div[i+1])
+    # print(kl_divergence_dic)
+    conn.commit()
+    ret=see_db.prunning(cursor,kl_divergence_dic)
+    # print(ret)
+    
+conn.commit()
 
+    
+    
+    
 
-def kl_divergence(ref_data,actual_data):
-    ref_data=normalize_data(ref_data)
-    print("Normalized reference data: ",ref_data)
-    actual_data=normalize_data(actual_data)
-    print("Normalized actual data: ",actual_data)
-    p_ref_data=[round(i/sum(ref_data),3) for i in ref_data]
-    print("probability of reference data: ",p_ref_data)
-    p_act_data=[round(i/sum(actual_data),3) for i in actual_data]
-    print("probability of actual  data: ",p_act_data)
-    return sum([(p_act_data[i]*(math.log(p_act_data[i]/p_ref_data[i]))) for i in range(len(p_ref_data)) if p_ref_data[i]>0 and p_act_data[i]>0])
+    
+# see_db=SeeDB()   
+# kl_divergence_dic=see_db.sharing_optimization_modified(cursor)
+# print(kl_divergence_dic)
+# conn.commit()
 
-def sharing_optimization():
-    groupby_col=['workclass','education','marital_status','occupation','relationship','race','sex','native_country']
-    aggregate_col=['fnlwgt','education_number','capital_gain','capital_loss','hours_per_week']
-    group_by=['sum','count','avg']
+# top5_pairs=kl_divergence_dic[0:5]
+# print(top5_pairs)
+    
+# for v in top5_pairs:
+#     plot(v[0])
+    
+# plot(top5_pairs[1][0])
+    
+            
+            
+            
+            
+            
      
     
-kl_divergence([i[1] for i in sorted(workclass_reference_records)],[i[1] for i in sorted(workclass_actual_records)])
+# kl_divergence([i[1] for i in sorted(workclass_reference_records)],[i[1] for i in sorted(workclass_actual_records)])
     
     
-def hoeffding_serfling_running_conf(phase, N_phases, delta):
-    
-    numerator = (1 - ((phase - 1)/N_phases))*(2*np.log(np.log(phase)) + np.log((np.pi*np.pi) / (3*delta)))
-    epsilon_m = np.sqrt(numerator / (2 * phase))
-    return epsilon_m
 
-def prune(kl_div_list, phase, N_phase, delta, k ):
-    kl_div_array = np.array(kl_div_list)
 
-    if phase == 1:
-        return []
-    else:
-        top_k_kl_divg = np.sort(kl_div_array)[::-1][:k]
-        CI = hoeffding_serfling_running_conf(phase, N_phase, delta)
-
-        min_lower_bound = top_k_kl_divg[k-1] - CI
-        prune_list = []
-        for i in range(len(kl_div_list)):
-            if kl_div_list[i]+CI < min_lower_bound:
-                prune_list.append(i)
-
-    return prune_list
-
-    
 
 
 
