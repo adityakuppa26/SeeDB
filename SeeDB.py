@@ -8,6 +8,10 @@ Created on Mon Apr 11 21:58:41 2022
 
 import psycopg2
 import pandas as pd
+from collections import defaultdict
+import numpy as np
+import scipy.stats
+import math
 
 # psql -h cs645db.cs.umass.edu -p 7645
                        
@@ -106,8 +110,8 @@ for row in workclass_reference_records:
 q="select workclass,sum(capital_loss) as capital_loss from actual_data group by workclass"
 cursor.execute(q) 
 workclass_actual_records = cursor.fetchall()
-import math
 print([i[1] for i in workclass_actual_records])
+
 
 def normalize_data(data):
     minn=min(data)
@@ -126,22 +130,49 @@ def kl_divergence(ref_data,actual_data):
     print("probability of actual  data: ",p_act_data)
     return sum([(p_act_data[i]*(math.log(p_act_data[i]/p_ref_data[i]))) for i in range(len(p_ref_data)) if p_ref_data[i]>0 and p_act_data[i]>0])
 
+
 def sharing_optimization():
     groupby_col=['workclass','education','marital_status','occupation','relationship','race','sex','native_country']
     aggregate_col=['fnlwgt','education_number','capital_gain','capital_loss','hours_per_week']
     group_by=['sum','count','avg']
-     
-    
-kl_divergence([i[1] for i in sorted(workclass_reference_records)],[i[1] for i in sorted(workclass_actual_records)])
-    
-    
 
 
+def pruning_optimization(views, phase_num, utility_measures, confidence=0.95, k=10):
+    confidence_intervals = defaultdict(list)
+    for view in views:
+        a, m, f = view  # tuple unpacking (a, m, f)
+        # TODO: update the below queries
+        query_target = f"select {a}, {f}({m}) from target_data where phase=phase_num group by {a};"
+        query_ref = f"select {a}, {f}({m}) from ref_data where phase=phase_num group by {a};"
+        # TODO: make a call to postgres and GET the data
+        query_ref_data, query_target_data = None, None
+        # calculate utility and confidence intervals
+        utility_measure = kl_divergence(query_ref_data, query_target_data)
+        utility_measures[phase_num][view] = utility_measure
+        mean_utility_measure = sum(utility_measures[:][view])/phase_num
+        std_err = scipy.stats.sem(np.array(utility_measures[:][view]))
+        h = std_err * scipy.stats.t.ppf((1 + confidence) / 2., len(utility_measures[:][view]) - 1)
+        confidence_intervals[view] = [mean_utility_measure-h, mean_utility_measure+h]
+
+    # prune the views if upper bound below lower bounds of 10 other views
+    # TODO: optimize the code if possible
+    final_views = views.copy()
+    for ind, view in enumerate(views):
+        count = 0
+        for v in views:
+            if confidence_intervals[view][1] < confidence_intervals[v][0]:
+                count += 1
+            if count >= k:
+                break
+        if count >= k:
+            final_views.pop(ind)
+
+    return final_views
 
 
-
-
-
-        
-
-        
+# def mean_confidence_interval(data, confidence=0.95):
+#     a = 1.0 * np.array(data)
+#     n = len(a)
+#     m, se = np.mean(a), scipy.stats.sem(a)
+#     h = se * scipy.stats.t.ppf((1 + confidence) / 2., n-1)
+#     return m, m-h, m+h
