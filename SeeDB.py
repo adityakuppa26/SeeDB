@@ -70,7 +70,7 @@ conn.commit()
 # cursor.execute("ROLLBACK")
 # conn.commit()
 
-num_phases=3
+num_phases=10
 # print(len(concensus_records))
 records_per_phase=int(len(concensus_records)/num_phases)
 # print(concensus_records[-1][0])
@@ -78,17 +78,35 @@ div=np.linspace(0, len(concensus_records)-1, num_phases+1,dtype=int)
 # print(div)
  
 see_db=SeeDB() 
-for i in range(0,1):#len(div)-1):
+sorted_dict=[]
+for i in range(0,num_phases):#len(div)-1):
+    
     # print(div[i],div[i+1])
     kl_divergence_dic=see_db.sharing_optimization_modified(cursor,div[i],div[i+1])
     # print(kl_divergence_dic)
     conn.commit()
-    ret=see_db.prunning(cursor,kl_divergence_dic)
-    # print(ret)
-    
-conn.commit()
+    print(len(see_db.prunning_dict.keys()))
+    ret=see_db.prunning(cursor,kl_divergence_dic,i+1,num_phases)
+    print("Prunning list")
+    see_db.cleaning()
+    # print(see_db.prunning_dict)
+    # print(len(see_db.prunning_dict.keys()))
+    sorted_dict=dict(sorted(see_db.prunning_dict.items(), key=lambda item: item[1][-1], reverse=True))
+    print(sorted_dict)
+    # top_k_values=[k for k,v in sorted_dict.items()][]
+    # print(top_k_values) 
+    # see_db.plot(top_k_values[0])
 
-    
+# sorted_dict=['education-fnlwgt-avg', 'workclass-fnlwgt-avg', 'relationship-education_num-avg', 'relationship-fnlwgt-avg', 'native_country-fnlwgt-avg']
+
+# sorted_dict=['relationship-hours_per_week-avg', 'relationship-fnlwgt-avg', 'race-hours_per_week-avg', 'race-fnlwgt-avg', 'relationship-hours_per_week-sum']
+
+for r in sorted_dict:
+    see_db.plot(r,cursor)
+# see_db.plot(sorted_dict[4],cursor)
+# conn.commit()
+
+
     
     
 
